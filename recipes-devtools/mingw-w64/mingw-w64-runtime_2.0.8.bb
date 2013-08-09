@@ -21,11 +21,10 @@ inherit autotools
 INHIBIT_DEFAULT_DEPS = "1"
 DEPENDS = "nativesdk-mingw-w64-headers virtual/${TARGET_PREFIX}gcc-initial "
 
-PROVIDES += "virtual/${TARGET_PREFIX}libc-initial"
-PROVIDES += "virtual/libc" 
-PROVIDES += "virtual/${TARGET_PREFIX}libc-for-gcc"
+#PROVIDES += "virtual/${SDK_PREFIX}libc-initial"
+#PROVIDES += "virtual/${SDK_PREFIX}libc-for-gcc"
 
-PROVIDES_class-nativesdk += "virtual/nativesdk-${TARGET_PREFIX}libc-for-gcc"
+PROVIDES_class-nativesdk += "virtual/nativesdk-${SDK_PREFIX}libc-for-gcc"
 
 STAGINGCC = "gcc-cross-initial"
 STAGINGCC_class-nativesdk = "gcc-crosssdk-initial"
@@ -37,7 +36,7 @@ do_configure() {
 }
 
 do_install_append() {
-    # Move files to include folder where gcc-crosssdk is looking
+    # Move files to folder where gcc-crosssdk is looking
     mv ${D}${exec_prefix}/${HOST_SYS}/lib* ${D}${exec_prefix}
     rmdir ${D}${exec_prefix}/${HOST_SYS}
 }

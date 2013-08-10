@@ -24,6 +24,7 @@ DEPENDS = "nativesdk-mingw-w64-headers virtual/${TARGET_PREFIX}gcc-initial "
 #PROVIDES += "virtual/${SDK_PREFIX}libc-initial"
 #PROVIDES += "virtual/${SDK_PREFIX}libc-for-gcc"
 
+PROVIDES_class-nativesdk += "virtual/nativesdk-libc"
 PROVIDES_class-nativesdk += "virtual/nativesdk-${SDK_PREFIX}libc-for-gcc"
 
 STAGINGCC = "gcc-cross-initial"

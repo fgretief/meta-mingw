@@ -20,4 +20,27 @@ SRC_URI[sha256sum] = "e6aca7aea8de33d9c8580bcb3a0ea3ec0a7ace4ba3f4e263ac7c7b66bc
 
 S = "${WORKDIR}/pthreads-w32-${PVdash}-release"
 
-## TODO: recipe is not finished yet. work in progress ..
+INHIBIT_DEFAULT_DEPS = "1"
+DEPENDS = "virtual/${SDK_PREFIX}gcc-initial"
+
+do_configure_prepend() {
+    ## First reset all permissions because all are executable
+    find . -type f -exec chmod 644 {} \;
+    ## Make a copy of config.h
+    cp config.h pthreads_win32_config.h
+}
+
+do_compile() {
+    make -f GNUmakefile CROSS=${SDK_PREFIX} clean GC
+}
+
+do_install() {
+    install -d -m 0755 ${D}${bindir}
+    install -d -m 0755 ${D}${includedir}
+    install -d -m 0755 ${D}${libdir}
+
+    install -m 0644 ${S}/pthread.h ${S}/sched.h ${S}/semaphore.h ${D}${includedir}/
+
+    install -m 0644 ${S}/libpthreadGC2.a ${D}${libdir}/libpthread.dll.a
+    install -m 0644 ${S}/pthreadGC2.dll ${D}${bindir}/libpthread-2.dll
+}

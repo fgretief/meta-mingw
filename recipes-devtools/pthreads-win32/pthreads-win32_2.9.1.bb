@@ -5,7 +5,7 @@ LIC_FILES_CHKSUM = "file://COPYING.LIB;md5=7fbc338309ac38fefcd64b04bb903e34"
 
 BBCLASSEXTEND = "nativesdk"
 
-PR = "r1"
+COMPATIBLE_HOST = ".*-mingw.*"
 
 ## Replace dots with dashes
 PVdash = "2-9-1"
@@ -21,7 +21,7 @@ SRC_URI[sha256sum] = "e6aca7aea8de33d9c8580bcb3a0ea3ec0a7ace4ba3f4e263ac7c7b66bc
 S = "${WORKDIR}/pthreads-w32-${PVdash}-release"
 
 INHIBIT_DEFAULT_DEPS = "1"
-DEPENDS = "virtual/${SDK_PREFIX}gcc-initial"
+DEPENDS = "virtual/${SDK_PREFIX}gcc-initial libgcc virtual/libc"
 
 do_configure_prepend() {
     ## First reset all permissions because all are executable

@@ -1,0 +1,16 @@
+mpfr 3.1.2 references these symbols and fails if they're not defined.
+
+Index: mingw-w64-headers/crt/float.h
+===================================================================
+--- mingw-w64-headers/crt.orig/float.h	2012-07-17 11:03:12.000000000 +0000
++++ mingw-w64-headers/crt/float.h	2013-08-13 08:23:20.000000000 +0000
+@@ -111,6 +111,9 @@
+ 	#define FLT_ROUNDS 1
+     
+ 	#define _FLOAT_H___
++
++	#define DBL_EPSILON __DBL_EPSILON__
++	#define FLT_EPSILON __FLT_EPSILON__
+ #endif
+ #endif
+ #endif

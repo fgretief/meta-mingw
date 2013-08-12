@@ -5,7 +5,7 @@ LIC_FILES_CHKSUM = "file://COPYING.LIB;md5=7fbc338309ac38fefcd64b04bb903e34"
 
 BBCLASSEXTEND = "nativesdk"
 
-PR = "r1"
+COMPATIBLE_HOST = ".*-mingw.*"
 
 ## Replace dots with dashes
 PVdash = "2-9-1"

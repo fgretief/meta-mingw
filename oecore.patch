@@ -1,0 +1,53 @@
+diff --git a/meta/classes/crosssdk.bbclass b/meta/classes/crosssdk.bbclass
+index 32b14d3..810f61d 100644
+--- a/meta/classes/crosssdk.bbclass
++++ b/meta/classes/crosssdk.bbclass
+@@ -23,7 +23,7 @@ target_libdir = "${SDKPATHNATIVE}${libdir_nativesdk}"
+ target_includedir = "${SDKPATHNATIVE}${includedir_nativesdk}"
+ target_base_libdir = "${SDKPATHNATIVE}${base_libdir_nativesdk}"
+ target_prefix = "${SDKPATHNATIVE}${prefix_nativesdk}"
+-target_exec_prefix = "${SDKPATHNATIVE}${exec_prefix_nativesdk}"
++target_exec_prefix = "${SDKPATHNATIVE}${prefix_nativesdk}"
+ baselib = "lib"
+ 
+ do_populate_sysroot[stamp-extra-info] = ""
+diff --git a/meta/classes/gettext.bbclass b/meta/classes/gettext.bbclass
+index 17c894f..4db6923 100644
+--- a/meta/classes/gettext.bbclass
++++ b/meta/classes/gettext.bbclass
+@@ -1,5 +1,5 @@
+ def gettext_dependencies(d):
+-    if d.getVar('USE_NLS', True) == 'no' and not oe.utils.inherits(d, 'native', 'nativesdk', 'cross'):
++    if d.getVar('USE_NLS', True) == 'no' and not oe.utils.inherits(d, 'native', 'cross'):
+         return ""
+     if d.getVar('INHIBIT_DEFAULT_DEPS', True) and not oe.utils.inherits(d, 'cross-canadian'):
+         return ""
+@@ -11,7 +11,7 @@ def gettext_oeconf(d):
+     if oe.utils.inherits(d, 'native', 'cross'):
+         return '--disable-nls'
+     # Remove the NLS bits if USE_NLS is no or INHIBIT_DEFAULT_DEPS is set
+-    if (d.getVar('USE_NLS', True) == 'no' or d.getVar('INHIBIT_DEFAULT_DEPS', True)) and not oe.utils.inherits(d, 'nativesdk', 'cross-canadian'):
++    if (d.getVar('USE_NLS', True) == 'no' or d.getVar('INHIBIT_DEFAULT_DEPS', True)) and not oe.utils.inherits(d, 'cross-canadian'):
+         return '--disable-nls'
+     return "--enable-nls"
+ 
+diff --git a/meta/recipes-support/libiconv/libiconv_1.14.bb b/meta/recipes-support/libiconv/libiconv_1.14.bb
+index b1d2612..1ba0d12 100644
+--- a/meta/recipes-support/libiconv/libiconv_1.14.bb
++++ b/meta/recipes-support/libiconv/libiconv_1.14.bb
+@@ -22,6 +22,8 @@ S = "${WORKDIR}/libiconv-${PV}"
+ inherit autotools pkgconfig gettext
+ 
+ python __anonymous() {
++    if d.getVar("TARGET_OS", True) != "linux":
++        return
+     if d.getVar("TCLIBC", True) == "eglibc":
+         raise bb.parse.SkipPackage("libiconv is provided for use with uClibc only - eglibc already provides iconv")
+ }
+@@ -44,3 +46,5 @@ do_install_append () {
+ 	rm -rf ${D}${libdir}/preloadable_libiconv.so
+ 	rm -rf ${D}${libdir}/charset.alias
+ }
++
++BBCLASSEXTEND = "nativesdk"
+\ No newline at end of file

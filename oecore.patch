@@ -31,6 +31,25 @@ index 17c894f..4db6923 100644
          return '--disable-nls'
      return "--enable-nls"
  
+diff --git a/meta/classes/populate_sdk_base.bbclass b/meta/classes/populate_sdk_base.bbclass
+index aa3c2fa..0e36dbf 100644
+--- a/meta/classes/populate_sdk_base.bbclass
++++ b/meta/classes/populate_sdk_base.bbclass
+@@ -108,11 +108,13 @@ fakeroot create_sdk_files() {
+ 	sed -i -e "s:##DEFAULT_INSTALL_DIR##:$escaped_sdkpath:" ${SDK_OUTPUT}/${SDKPATH}/relocate_sdk.py
+ }
+ 
++SDKTAROPTS = "--owner=root --group=root -hj --hard-dereference"
++
+ fakeroot tar_sdk() {
+ 	# Package it up
+ 	mkdir -p ${SDK_DEPLOY}
+ 	cd ${SDK_OUTPUT}/${SDKPATH}
+-	tar --owner=root --group=root -cj --file=${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2 .
++	tar ${SDKTAROPTS} -c --file=${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2 .
+ }
+ 
+ fakeroot create_shar() {
 diff --git a/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb b/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
 index 63fea28..5030e76 100644
 --- a/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
@@ -116,6 +135,38 @@ index 53c4632..13e01a5 100644
  
  SYSTEMHEADERS = "/usr/include"
  SYSTEMLIBS = "${target_base_libdir}/"
+diff --git a/meta/recipes-devtools/gcc/gcc-package-sdk.inc b/meta/recipes-devtools/gcc/gcc-package-sdk.inc
+index bb6dfde..2ebb8c4 100644
+--- a/meta/recipes-devtools/gcc/gcc-package-sdk.inc
++++ b/meta/recipes-devtools/gcc/gcc-package-sdk.inc
+@@ -28,6 +28,11 @@ FILES_${PN}-doc = "\
+     ${gcclibdir}/${TARGET_SYS}/${BINV}/include/README \
+     "
+ 
++EXEEXT = ""
++
++# Compute how to get from libexecdir to bindir in python (easier than shell)
++BINRELPATH = "${@oe.path.relative(d.expand("${libexecdir}/gcc/${TARGET_SYS}/${BINV}"), d.expand("${bindir}"))}"
++
+ do_install () {
+ 	oe_runmake 'DESTDIR=${D}' install-host
+ 
+@@ -59,12 +64,13 @@ do_install () {
+ 	# found.
+ 	dest=${D}${libexecdir}/gcc/${TARGET_SYS}/${BINV}/
+ 	install -d $dest
++        suffix=${EXEEXT}
+ 	for t in ar as ld nm objcopy objdump ranlib strip g77 gcc cpp gfortran; do
+-		if [ "$t" = "g77" -o "$t" = "gfortran" ] && [ ! -e ${D}${bindir}/${TARGET_PREFIX}$t ]; then
++		if [ "$t" = "g77" -o "$t" = "gfortran" ] && [ ! -e ${D}${bindir}/${TARGET_PREFIX}$t$suffix ]; then
+ 			continue
+ 		fi
+ 
+-		ln -sf ${bindir}/${TARGET_PREFIX}$t $dest$t
++		ln -sf ${BINRELPATH}/${TARGET_PREFIX}$t$suffix $dest$t$suffix
+ 	done
+ 
+ 	chown -R root:root ${D}
 diff --git a/meta/recipes-support/libiconv/libiconv_1.14.bb b/meta/recipes-support/libiconv/libiconv_1.14.bb
 index b1d2612..1ba0d12 100644
 --- a/meta/recipes-support/libiconv/libiconv_1.14.bb

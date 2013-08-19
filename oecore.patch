@@ -32,14 +32,14 @@ index 17c894f..4db6923 100644
      return "--enable-nls"
  
 diff --git a/meta/classes/populate_sdk_base.bbclass b/meta/classes/populate_sdk_base.bbclass
-index aa3c2fa..0e36dbf 100644
+index aa3c2fa..998280e 100644
 --- a/meta/classes/populate_sdk_base.bbclass
 +++ b/meta/classes/populate_sdk_base.bbclass
 @@ -108,11 +108,13 @@ fakeroot create_sdk_files() {
  	sed -i -e "s:##DEFAULT_INSTALL_DIR##:$escaped_sdkpath:" ${SDK_OUTPUT}/${SDKPATH}/relocate_sdk.py
  }
  
-+SDKTAROPTS = "--owner=root --group=root -hj --hard-dereference"
++SDKTAROPTS = "--owner=root --group=root -j"
 +
  fakeroot tar_sdk() {
  	# Package it up
@@ -50,11 +50,36 @@ index aa3c2fa..0e36dbf 100644
  }
  
  fakeroot create_shar() {
+diff --git a/meta/conf/bitbake.conf b/meta/conf/bitbake.conf
+index 07eb473..b7f9578 100644
+--- a/meta/conf/bitbake.conf
++++ b/meta/conf/bitbake.conf
+@@ -257,14 +257,14 @@ RPROVIDES = ""
+ MULTI_PROVIDER_WHITELIST = "virtual/libintl virtual/libintl-native virtual/nativesdk-libintl virtual/xserver virtual/update-alternatives-native virtual/update-alternatives"
+ 
+ SOLIBS = ".so.*"
+-SOLIBS_darwin = ".*.dylib"
+-SOLIBS_darwin8 = ".*.dylib"
+-SOLIBS_darwin9 = ".*.dylib"
++SOLIBS_darwin = ".dylib"
++SOLIBS_darwin8 = ".dylib"
++SOLIBS_darwin9 = ".dylib"
+ 
+ SOLIBSDEV = ".so"
+-SOLIBSDEV_darwin = ".dylib"
+-SOLIBSDEV_darwin8 = ".dylib"
+-SOLIBSDEV_darwin9 = ".dylib"
++SOLIBSDEV_darwin = ".dylibxx"
++SOLIBSDEV_darwin8 = ".dylibxx"
++SOLIBSDEV_darwin9 = ".dylibxx"
+ 
+ PACKAGE_BEFORE_PN ?= ""
+ PACKAGES = "${PN}-dbg ${PN}-staticdev ${PN}-dev ${PN}-doc ${PN}-locale ${PACKAGE_BEFORE_PN} ${PN}"
 diff --git a/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb b/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
-index 63fea28..5030e76 100644
+index 63fea28..a06bab3 100644
 --- a/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
 +++ b/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
-@@ -29,3 +29,8 @@ RDEPENDS_${PN}_darwin8 = "\
+@@ -29,3 +29,12 @@ RDEPENDS_${PN}_darwin8 = "\
      nativesdk-opkg \
      nativesdk-libtool \
      "
@@ -63,6 +88,11 @@ index 63fea28..5030e76 100644
 +    nativesdk-pkgconfig \
 +    nativesdk-libtool \
 +    "
++
++RDEPENDS_${PN}_darwin = "\
++    nativesdk-libtool \
++    "
+\ No newline at end of file
 diff --git a/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb b/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb
 index a6c6c36..1f18944 100644
 --- a/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb
@@ -78,17 +108,29 @@ index a6c6c36..1f18944 100644
 +    "
 +
 diff --git a/meta/recipes-devtools/gcc/gcc-4.8.inc b/meta/recipes-devtools/gcc/gcc-4.8.inc
-index 9d92eda..302059c 100644
+index 9d92eda..974f88f 100644
 --- a/meta/recipes-devtools/gcc/gcc-4.8.inc
 +++ b/meta/recipes-devtools/gcc/gcc-4.8.inc
-@@ -72,6 +72,7 @@ SRC_URI = "${GNU_MIRROR}/gcc/gcc-${PV}/gcc-${PV}.tar.bz2 \
+@@ -72,6 +72,8 @@ SRC_URI = "${GNU_MIRROR}/gcc/gcc-${PV}/gcc-${PV}.tar.bz2 \
  	   file://0040-fix-g++-sysroot.patch \
  	   file://0041-libtool-avoid-libdir.patch \
  	   file://0042-pr57748.patch \
 +	   file://cpp.patch \
++	   file://gengtypes.patch \
  	  "
  SRC_URI[md5sum] = "3b2386c114cd74185aa3754b58a79304"
  SRC_URI[sha256sum] = "545b44be3ad9f2c4e90e6880f5c9d4f0a8f0e5f67e1ffb0d45da9fa01bb05813"
+@@ -83,7 +85,9 @@ B = "${WORKDIR}/gcc-${PV}/build.${HOST_SYS}.${TARGET_SYS}"
+ FORTRAN = ""
+ JAVA = ""
+ 
+-EXTRA_OECONF_BASE = " --enable-lto \
++LTO = "--enable-lto"
++
++EXTRA_OECONF_BASE = "   ${LTO} \
+ 			--enable-libssp \
+ 			--disable-bootstrap \
+ 			--disable-libmudflap \
 diff --git a/meta/recipes-devtools/gcc/gcc-4.8/cpp.patch b/meta/recipes-devtools/gcc/gcc-4.8/cpp.patch
 new file mode 100644
 index 0000000..feb4eab
@@ -107,6 +149,78 @@ index 0000000..feb4eab
 + 	CFLAGS="$(CFLAGS_FOR_BUILD)"; export CFLAGS; \
 + 	CONFIG_SHELL="$(SHELL)"; export CONFIG_SHELL; \
 + 	CXX="$(CXX_FOR_BUILD)"; export CXX; \
+diff --git a/meta/recipes-devtools/gcc/gcc-4.8/gengtypes.patch b/meta/recipes-devtools/gcc/gcc-4.8/gengtypes.patch
+new file mode 100644
+index 0000000..289238b
+--- /dev/null
++++ b/meta/recipes-devtools/gcc/gcc-4.8/gengtypes.patch
+@@ -0,0 +1,66 @@
++Only the build/gengtypes should have the -DGENERATOR_FILE 
++
++Index: gcc-4.8.1/gcc/Makefile.in
++===================================================================
++--- gcc-4.8.1.orig/gcc/Makefile.in	2013-08-19 11:40:36.844014424 +0000
+++++ gcc-4.8.1/gcc/Makefile.in	2013-08-19 11:40:37.784014402 +0000
++@@ -3903,27 +3903,29 @@
++ 
++ gengtype-lex.o build/gengtype-lex.o : gengtype-lex.c gengtype.h $(SYSTEM_H)
++ gengtype-lex.o: $(CONFIG_H) $(BCONFIG_H)
++-CFLAGS-gengtype-lex.o += -DGENERATOR_FILE
+++CFLAGS-build/gengtype-lex.o += -DGENERATOR_FILE
++ build/gengtype-lex.o: $(BCONFIG_H)
++ 
++ gengtype-parse.o build/gengtype-parse.o : gengtype-parse.c gengtype.h \
++   $(SYSTEM_H)
++ gengtype-parse.o: $(CONFIG_H)
++-CFLAGS-gengtype-parse.o += -DGENERATOR_FILE
+++CFLAGS-build/gengtype-parse.o += -DGENERATOR_FILE
++ build/gengtype-parse.o: $(BCONFIG_H)
++ 
++ gengtype-state.o build/gengtype-state.o: gengtype-state.c $(SYSTEM_H) \
++   gengtype.h errors.h double-int.h version.h $(HASHTAB_H) $(OBSTACK_H) \
++   $(XREGEX_H)
++ gengtype-state.o: $(CONFIG_H)
++-CFLAGS-gengtype-state.o += -DGENERATOR_FILE
+++CFLAGS-gengtype-state.o += -DGENERATOR_FILE2
+++CFLAGS-build/gengtype-state.o += -DGENERATOR_FILE
++ build/gengtype-state.o: $(BCONFIG_H)
++ 
++ gengtype.o build/gengtype.o : gengtype.c $(SYSTEM_H) gengtype.h 	\
++   rtl.def insn-notes.def errors.h double-int.h version.h $(HASHTAB_H) \
++   $(OBSTACK_H) $(XREGEX_H)
++ gengtype.o: $(CONFIG_H)
++-CFLAGS-gengtype.o += -DGENERATOR_FILE
+++CFLAGS-gengtype.o += -DGENERATOR_FILE2
+++CFLAGS-build/gengtype.o += -DGENERATOR_FILE
++ build/gengtype.o: $(BCONFIG_H)
++ 
++ build/genmddeps.o: genmddeps.c $(BCONFIG_H) $(SYSTEM_H) coretypes.h	\
++@@ -3988,7 +3990,7 @@
++ # any system header is included.
++ gengtype-lex.c : gengtype-lex.l
++ 	-$(FLEX) $(FLEXFLAGS) -o$@ $< && { \
++-	  echo '#include "bconfig.h"' > $@.tmp; \
+++	  echo '' > $@.tmp; \
++ 	  cat $@ >> $@.tmp; \
++ 	  mv $@.tmp $@; \
++ 	}
++Index: gcc-4.8.1/gcc/double-int.h
++===================================================================
++--- gcc-4.8.1.orig/gcc/double-int.h	2013-01-30 11:04:30.000000000 +0000
+++++ gcc-4.8.1/gcc/double-int.h	2013-08-19 11:41:51.564012719 +0000
++@@ -448,10 +448,12 @@
++ 
++ 
++ #ifndef GENERATOR_FILE
+++#ifndef GENERATOR_FILE2
++ /* Conversion to and from GMP integer representations.  */
++ 
++ void mpz_set_double_int (mpz_t, double_int, bool);
++ double_int mpz_get_double_int (const_tree, mpz_t, bool);
++ #endif
+++#endif
++ 
++ #endif /* DOUBLE_INT_H */
 diff --git a/meta/recipes-devtools/gcc/gcc-configure-sdk.inc b/meta/recipes-devtools/gcc/gcc-configure-sdk.inc
 index 51c0217..6c55bc7 100644
 --- a/meta/recipes-devtools/gcc/gcc-configure-sdk.inc

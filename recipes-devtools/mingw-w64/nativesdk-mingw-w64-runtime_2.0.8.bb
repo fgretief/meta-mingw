@@ -21,9 +21,7 @@ PROVIDES += "virtual/nativesdk-${SDK_PREFIX}libc-initial"
 PROVIDES += "virtual/nativesdk-${SDK_PREFIX}libc-for-gcc"
 
 # Work around pulling in eglibc for now...
-PROVIDES += "virtual/nativesdk-libiconv"
 PROVIDES += "virtual/nativesdk-libintl"
-
 
 STAGINGCC = "gcc-cross-initial"
 STAGINGCC_class-nativesdk = "gcc-crosssdk-initial"

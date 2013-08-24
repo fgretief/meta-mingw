@@ -1,6 +1,2 @@
-#FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-
-## MinGW specific files
-
-FILES_${PN} += "${base_libdir}/libgcc_s*.dll"
-FILES_${PN}-staticdev += "${base_libdir}/libgcc_s.a"
+FILES_${PN} += "${base_libdir}/libgcc*.dll"
+FILES_${PN}-dev += "${base_libdir}/libgcc*.a"

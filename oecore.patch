@@ -31,6 +31,256 @@ index 17c894f..4db6923 100644
          return '--disable-nls'
      return "--enable-nls"
  
+diff --git a/meta/classes/populate_sdk_base.bbclass b/meta/classes/populate_sdk_base.bbclass
+index aa3c2fa..998280e 100644
+--- a/meta/classes/populate_sdk_base.bbclass
++++ b/meta/classes/populate_sdk_base.bbclass
+@@ -108,11 +108,13 @@ fakeroot create_sdk_files() {
+ 	sed -i -e "s:##DEFAULT_INSTALL_DIR##:$escaped_sdkpath:" ${SDK_OUTPUT}/${SDKPATH}/relocate_sdk.py
+ }
+ 
++SDKTAROPTS = "--owner=root --group=root -j"
++
+ fakeroot tar_sdk() {
+ 	# Package it up
+ 	mkdir -p ${SDK_DEPLOY}
+ 	cd ${SDK_OUTPUT}/${SDKPATH}
+-	tar --owner=root --group=root -cj --file=${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2 .
++	tar ${SDKTAROPTS} -c --file=${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2 .
+ }
+ 
+ fakeroot create_shar() {
+diff --git a/meta/conf/bitbake.conf b/meta/conf/bitbake.conf
+index 07eb473..b7f9578 100644
+--- a/meta/conf/bitbake.conf
++++ b/meta/conf/bitbake.conf
+@@ -257,14 +257,14 @@ RPROVIDES = ""
+ MULTI_PROVIDER_WHITELIST = "virtual/libintl virtual/libintl-native virtual/nativesdk-libintl virtual/xserver virtual/update-alternatives-native virtual/update-alternatives"
+ 
+ SOLIBS = ".so.*"
+-SOLIBS_darwin = ".*.dylib"
+-SOLIBS_darwin8 = ".*.dylib"
+-SOLIBS_darwin9 = ".*.dylib"
++SOLIBS_darwin = ".dylib"
++SOLIBS_darwin8 = ".dylib"
++SOLIBS_darwin9 = ".dylib"
+ 
+ SOLIBSDEV = ".so"
+-SOLIBSDEV_darwin = ".dylib"
+-SOLIBSDEV_darwin8 = ".dylib"
+-SOLIBSDEV_darwin9 = ".dylib"
++SOLIBSDEV_darwin = ".dylibxx"
++SOLIBSDEV_darwin8 = ".dylibxx"
++SOLIBSDEV_darwin9 = ".dylibxx"
+ 
+ PACKAGE_BEFORE_PN ?= ""
+ PACKAGES = "${PN}-dbg ${PN}-staticdev ${PN}-dev ${PN}-doc ${PN}-locale ${PACKAGE_BEFORE_PN} ${PN}"
+diff --git a/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb b/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
+index 63fea28..a06bab3 100644
+--- a/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
++++ b/meta/recipes-core/packagegroups/nativesdk-packagegroup-sdk-host.bb
+@@ -29,3 +29,12 @@ RDEPENDS_${PN}_darwin8 = "\
+     nativesdk-opkg \
+     nativesdk-libtool \
+     "
++
++RDEPENDS_${PN}_mingw32 = "\
++    nativesdk-pkgconfig \
++    nativesdk-libtool \
++    "
++
++RDEPENDS_${PN}_darwin = "\
++    nativesdk-libtool \
++    "
+\ No newline at end of file
+diff --git a/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb b/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb
+index a6c6c36..1f18944 100644
+--- a/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb
++++ b/meta/recipes-core/packagegroups/packagegroup-cross-canadian.bb
+@@ -20,3 +20,9 @@ RDEPENDS_${PN} = "\
+     meta-environment-${TRANSLATED_TARGET_ARCH} \
+     "
+ 
++RDEPENDS_${PN} = "\
++    binutils-cross-canadian-${TRANSLATED_TARGET_ARCH} \
++    gcc-cross-canadian-${TRANSLATED_TARGET_ARCH} \
++    meta-environment-${TRANSLATED_TARGET_ARCH} \
++    "
++
+diff --git a/meta/recipes-devtools/gcc/gcc-4.8.inc b/meta/recipes-devtools/gcc/gcc-4.8.inc
+index 9d92eda..974f88f 100644
+--- a/meta/recipes-devtools/gcc/gcc-4.8.inc
++++ b/meta/recipes-devtools/gcc/gcc-4.8.inc
+@@ -72,6 +72,8 @@ SRC_URI = "${GNU_MIRROR}/gcc/gcc-${PV}/gcc-${PV}.tar.bz2 \
+ 	   file://0040-fix-g++-sysroot.patch \
+ 	   file://0041-libtool-avoid-libdir.patch \
+ 	   file://0042-pr57748.patch \
++	   file://cpp.patch \
++	   file://gengtypes.patch \
+ 	  "
+ SRC_URI[md5sum] = "3b2386c114cd74185aa3754b58a79304"
+ SRC_URI[sha256sum] = "545b44be3ad9f2c4e90e6880f5c9d4f0a8f0e5f67e1ffb0d45da9fa01bb05813"
+@@ -83,7 +85,9 @@ B = "${WORKDIR}/gcc-${PV}/build.${HOST_SYS}.${TARGET_SYS}"
+ FORTRAN = ""
+ JAVA = ""
+ 
+-EXTRA_OECONF_BASE = " --enable-lto \
++LTO = "--enable-lto"
++
++EXTRA_OECONF_BASE = "   ${LTO} \
+ 			--enable-libssp \
+ 			--disable-bootstrap \
+ 			--disable-libmudflap \
+diff --git a/meta/recipes-devtools/gcc/gcc-4.8/cpp.patch b/meta/recipes-devtools/gcc/gcc-4.8/cpp.patch
+new file mode 100644
+index 0000000..feb4eab
+--- /dev/null
++++ b/meta/recipes-devtools/gcc/gcc-4.8/cpp.patch
+@@ -0,0 +1,12 @@
++Index: gcc-4.8.1/Makefile.in
++===================================================================
++--- gcc-4.8.1.orig/Makefile.in	2013-03-30 11:25:03.000000000 +0000
+++++ gcc-4.8.1/Makefile.in	2013-08-13 12:03:17.151988882 +0000
++@@ -149,6 +149,7 @@
++ 	AR="$(AR_FOR_BUILD)"; export AR; \
++ 	AS="$(AS_FOR_BUILD)"; export AS; \
++ 	CC="$(CC_FOR_BUILD)"; export CC; \
+++	CPP="$(CC_FOR_BUILD) -E"; export CPP; \
++ 	CFLAGS="$(CFLAGS_FOR_BUILD)"; export CFLAGS; \
++ 	CONFIG_SHELL="$(SHELL)"; export CONFIG_SHELL; \
++ 	CXX="$(CXX_FOR_BUILD)"; export CXX; \
+diff --git a/meta/recipes-devtools/gcc/gcc-4.8/gengtypes.patch b/meta/recipes-devtools/gcc/gcc-4.8/gengtypes.patch
+new file mode 100644
+index 0000000..289238b
+--- /dev/null
++++ b/meta/recipes-devtools/gcc/gcc-4.8/gengtypes.patch
+@@ -0,0 +1,66 @@
++Only the build/gengtypes should have the -DGENERATOR_FILE 
++
++Index: gcc-4.8.1/gcc/Makefile.in
++===================================================================
++--- gcc-4.8.1.orig/gcc/Makefile.in	2013-08-19 11:40:36.844014424 +0000
+++++ gcc-4.8.1/gcc/Makefile.in	2013-08-19 11:40:37.784014402 +0000
++@@ -3903,27 +3903,29 @@
++ 
++ gengtype-lex.o build/gengtype-lex.o : gengtype-lex.c gengtype.h $(SYSTEM_H)
++ gengtype-lex.o: $(CONFIG_H) $(BCONFIG_H)
++-CFLAGS-gengtype-lex.o += -DGENERATOR_FILE
+++CFLAGS-build/gengtype-lex.o += -DGENERATOR_FILE
++ build/gengtype-lex.o: $(BCONFIG_H)
++ 
++ gengtype-parse.o build/gengtype-parse.o : gengtype-parse.c gengtype.h \
++   $(SYSTEM_H)
++ gengtype-parse.o: $(CONFIG_H)
++-CFLAGS-gengtype-parse.o += -DGENERATOR_FILE
+++CFLAGS-build/gengtype-parse.o += -DGENERATOR_FILE
++ build/gengtype-parse.o: $(BCONFIG_H)
++ 
++ gengtype-state.o build/gengtype-state.o: gengtype-state.c $(SYSTEM_H) \
++   gengtype.h errors.h double-int.h version.h $(HASHTAB_H) $(OBSTACK_H) \
++   $(XREGEX_H)
++ gengtype-state.o: $(CONFIG_H)
++-CFLAGS-gengtype-state.o += -DGENERATOR_FILE
+++CFLAGS-gengtype-state.o += -DGENERATOR_FILE2
+++CFLAGS-build/gengtype-state.o += -DGENERATOR_FILE
++ build/gengtype-state.o: $(BCONFIG_H)
++ 
++ gengtype.o build/gengtype.o : gengtype.c $(SYSTEM_H) gengtype.h 	\
++   rtl.def insn-notes.def errors.h double-int.h version.h $(HASHTAB_H) \
++   $(OBSTACK_H) $(XREGEX_H)
++ gengtype.o: $(CONFIG_H)
++-CFLAGS-gengtype.o += -DGENERATOR_FILE
+++CFLAGS-gengtype.o += -DGENERATOR_FILE2
+++CFLAGS-build/gengtype.o += -DGENERATOR_FILE
++ build/gengtype.o: $(BCONFIG_H)
++ 
++ build/genmddeps.o: genmddeps.c $(BCONFIG_H) $(SYSTEM_H) coretypes.h	\
++@@ -3988,7 +3990,7 @@
++ # any system header is included.
++ gengtype-lex.c : gengtype-lex.l
++ 	-$(FLEX) $(FLEXFLAGS) -o$@ $< && { \
++-	  echo '#include "bconfig.h"' > $@.tmp; \
+++	  echo '' > $@.tmp; \
++ 	  cat $@ >> $@.tmp; \
++ 	  mv $@.tmp $@; \
++ 	}
++Index: gcc-4.8.1/gcc/double-int.h
++===================================================================
++--- gcc-4.8.1.orig/gcc/double-int.h	2013-01-30 11:04:30.000000000 +0000
+++++ gcc-4.8.1/gcc/double-int.h	2013-08-19 11:41:51.564012719 +0000
++@@ -448,10 +448,12 @@
++ 
++ 
++ #ifndef GENERATOR_FILE
+++#ifndef GENERATOR_FILE2
++ /* Conversion to and from GMP integer representations.  */
++ 
++ void mpz_set_double_int (mpz_t, double_int, bool);
++ double_int mpz_get_double_int (const_tree, mpz_t, bool);
++ #endif
+++#endif
++ 
++ #endif /* DOUBLE_INT_H */
+diff --git a/meta/recipes-devtools/gcc/gcc-configure-sdk.inc b/meta/recipes-devtools/gcc/gcc-configure-sdk.inc
+index 51c0217..6c55bc7 100644
+--- a/meta/recipes-devtools/gcc/gcc-configure-sdk.inc
++++ b/meta/recipes-devtools/gcc/gcc-configure-sdk.inc
+@@ -43,5 +43,5 @@ do_configure () {
+ }
+ 
+ do_compile () {
+-	oe_runmake all-host all-target-libgcc
++	oe_runmake all-host
+ }
+diff --git a/meta/recipes-devtools/gcc/gcc-cross-canadian_4.8.bb b/meta/recipes-devtools/gcc/gcc-cross-canadian_4.8.bb
+index 53c4632..13e01a5 100644
+--- a/meta/recipes-devtools/gcc/gcc-cross-canadian_4.8.bb
++++ b/meta/recipes-devtools/gcc/gcc-cross-canadian_4.8.bb
+@@ -5,8 +5,10 @@ require gcc-cross-canadian.inc
+ require gcc-configure-sdk.inc
+ require gcc-package-sdk.inc
+ 
+-DEPENDS += "nativesdk-gmp nativesdk-mpfr nativesdk-libmpc nativesdk-elfutils"
+-RDEPENDS_${PN} += "nativesdk-mpfr nativesdk-libmpc nativesdk-elfutils"
++DEPENDS += "nativesdk-gmp nativesdk-mpfr nativesdk-libmpc"
++# nativesdk-elfutils"
++RDEPENDS_${PN} += "nativesdk-mpfr nativesdk-libmpc"
++# nativesdk-elfutils"
+ 
+ SYSTEMHEADERS = "/usr/include"
+ SYSTEMLIBS = "${target_base_libdir}/"
+diff --git a/meta/recipes-devtools/gcc/gcc-package-sdk.inc b/meta/recipes-devtools/gcc/gcc-package-sdk.inc
+index bb6dfde..2ebb8c4 100644
+--- a/meta/recipes-devtools/gcc/gcc-package-sdk.inc
++++ b/meta/recipes-devtools/gcc/gcc-package-sdk.inc
+@@ -28,6 +28,11 @@ FILES_${PN}-doc = "\
+     ${gcclibdir}/${TARGET_SYS}/${BINV}/include/README \
+     "
+ 
++EXEEXT = ""
++
++# Compute how to get from libexecdir to bindir in python (easier than shell)
++BINRELPATH = "${@oe.path.relative(d.expand("${libexecdir}/gcc/${TARGET_SYS}/${BINV}"), d.expand("${bindir}"))}"
++
+ do_install () {
+ 	oe_runmake 'DESTDIR=${D}' install-host
+ 
+@@ -59,12 +64,13 @@ do_install () {
+ 	# found.
+ 	dest=${D}${libexecdir}/gcc/${TARGET_SYS}/${BINV}/
+ 	install -d $dest
++        suffix=${EXEEXT}
+ 	for t in ar as ld nm objcopy objdump ranlib strip g77 gcc cpp gfortran; do
+-		if [ "$t" = "g77" -o "$t" = "gfortran" ] && [ ! -e ${D}${bindir}/${TARGET_PREFIX}$t ]; then
++		if [ "$t" = "g77" -o "$t" = "gfortran" ] && [ ! -e ${D}${bindir}/${TARGET_PREFIX}$t$suffix ]; then
+ 			continue
+ 		fi
+ 
+-		ln -sf ${bindir}/${TARGET_PREFIX}$t $dest$t
++		ln -sf ${BINRELPATH}/${TARGET_PREFIX}$t$suffix $dest$t$suffix
+ 	done
+ 
+ 	chown -R root:root ${D}
 diff --git a/meta/recipes-support/libiconv/libiconv_1.14.bb b/meta/recipes-support/libiconv/libiconv_1.14.bb
 index b1d2612..1ba0d12 100644
 --- a/meta/recipes-support/libiconv/libiconv_1.14.bb

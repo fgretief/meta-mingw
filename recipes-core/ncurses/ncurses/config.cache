@@ -1,0 +1,5 @@
+#! /bin/sh
+
+cf_cv_working_poll=no
+cf_cv_func_nanosleep=no
+cf_cv_func_mkstemp=no

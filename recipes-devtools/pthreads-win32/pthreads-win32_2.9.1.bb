@@ -23,11 +23,6 @@ S = "${WORKDIR}/pthreads-w32-${PVdash}-release"
 INHIBIT_DEFAULT_DEPS = "1"
 DEPENDS = "virtual/${SDK_PREFIX}gcc-initial libgcc virtual/libc"
 
-STAGINGCC = "gcc-cross-initial"
-STAGINGCC_class-nativesdk = "gcc-crosssdk-initial"
-TOOLCHAIN_OPTIONS = " --sysroot=${STAGING_DIR_TARGET}"
-PATH_prepend = "${STAGING_BINDIR_TOOLCHAIN}.${STAGINGCC}:"
-
 do_configure_prepend() {
     ## First reset all permissions because all are executable
     find . -type f -exec chmod 644 {} \;

@@ -1,2 +1,2 @@
-FILES_${PN} += "${base_libdir}/libgcc*.dll"
-FILES_${PN}-dev += "${base_libdir}/libgcc*.a"
+FILES_${PN}_append_mingw32 = " ${base_libdir}/libgcc*.dll"
+FILES_${PN}-dev_append_mingw32 = " ${base_libdir}/libgcc*.a"
